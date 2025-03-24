@@ -1,4 +1,4 @@
-from meonglentera import FFNN, Layer
+from src.miawlentera import FFNN, Layer
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.datasets import make_classification

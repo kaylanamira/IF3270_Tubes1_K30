@@ -47,7 +47,7 @@ class Value:
         out = Value(self.data ** n, (self,), f'**{n}')
 
         def _backward():
-            self.grad += (n * (self.data ** (n-1))) * out.grad
+            self.grad += (n * (self.data ** (n - 1))) * out.grad
         out._backward = _backward
 
         return out

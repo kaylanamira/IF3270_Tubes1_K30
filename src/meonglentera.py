@@ -33,7 +33,7 @@ class Layer(Module):
 
     def __call__(self, x):
         out = [n(x) for n in self.neurons]
-        return [out[0]]
+        return out[0] if len(out) == 1 else out
 
     def parameters(self):
         return [p for n in self.neurons for p in n.parameters()]
@@ -45,7 +45,7 @@ class FFNN(Module):
 
     def __init__(self, nin, nouts):
         sz = [nin] + nouts
-        self.layers = [Layer(sz[i], sz[i+1], nonlin=(i != len(nouts) - 1)) for i in range(len(nouts))]
+        self.layers = [Layer(sz[i], sz[i+1]) for i in range(len(nouts))]
 
     def __call__(self, x):
         for layer in self.layers:

@@ -35,6 +35,16 @@ class Neuron(Module):
             std_dev = math.sqrt(variance)
             return ([Value(random.gauss(mean, std_dev)) for _ in range(n_in)], Value(random.gauss(mean, std_dev)))
         
+        # xavier initialization (uniform)
+        if weight_init == 'xavier':
+            limit = math.sqrt(1 / n_in)
+            return ([Value(random.uniform(-limit, limit)) for _ in range(n_in)], Value(random.uniform(-limit, limit)))
+
+        # he initialization (normal)
+        if weight_init == 'he':
+            std_dev = math.sqrt(2 / n_in)
+            return ([Value(random.gauss(0, std_dev)) for _ in range(n_in)], Value(random.gauss(0, std_dev)))
+        
     def __call__(self, x):
         net = sum((wi*xi for wi,xi in zip(self.w, x)), self.b)
 

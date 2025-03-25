@@ -48,6 +48,8 @@ class Neuron(Module):
             return net.leaky_relu()
         if self.activation == 'swish':
             return net.swish()
+        if self.activation == 'softmax':
+            return net.softmax()
     
         return net
 

@@ -127,6 +127,66 @@ class Value:
         out._backward = _backward
 
         return out
+    
+    # rusak klo gede nominal angka
+    # def softmax(values):
+    #     exp_values = [math.exp(v.data) for v in values]
+    #     sum_exp = sum(exp_values)
+    #     softmax_values = [Value(exp_v / sum_exp, (v,), 'softmax') for v, exp_v in zip(values, exp_values)]
 
+    #     def _backward():
+    #         for i, v_i in enumerate(softmax_values):
+    #             for j, v_j in enumerate(values):
+    #                 delta_ij = 1 if i == j else 0
+    #                 v_j.grad += v_i.data * (delta_ij - v_j.data) * v_i.grad
+
+    #     for v in softmax_values:
+    #         v._backward = _backward
+
+    #     return softmax_values
+    
+    def softmax(values):
+        data = [v.data for v in values]
+        
+        max_val = max(data)
+        exp_shifted = [math.exp(v.data - max_val) for v in values]
+        sum_exp = sum(exp_shifted)
+
+        softmax_values = [
+            Value(e / sum_exp, (v,), 'softmax') for v, e in zip(values, exp_shifted)
+        ]
+
+        def _backward():
+            for i, v_i in enumerate(softmax_values):
+                for j, v_j in enumerate(values):
+                    delta_ij = 1 if i == j else 0
+                    grad = v_i.data * (delta_ij - v_j.data) * v_i.grad
+                    v_j.grad += grad
+
+        for v in softmax_values:
+            v._backward = _backward
+
+        return softmax_values
+    
+
+
+x1 = Value(1)
+x2 = Value(2)
+x3 = Value(3)
+
+softmax_outputs = Value.softmax([x1, x2, x3])
+
+# Print results
+for i, s in enumerate(softmax_outputs):
+    print(f"Softmax[{i}]: {s}")
+
+# Simulate loss gradient
+softmax_outputs[0].grad = 1.0  # Example gradient from loss function
+softmax_outputs[0].backward_propagate()
+
+# Print gradients
+print(f"x1 grad: {x1.grad}")
+print(f"x2 grad: {x2.grad}")
+print(f"x3 grad: {x3.grad}")
 
         

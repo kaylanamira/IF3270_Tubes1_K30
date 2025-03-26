@@ -188,15 +188,13 @@ class FFNN(Module):
             x_batches = [x[i:i + batch_size] for i in range(0, len(x), batch_size)]
             y_batches = [y[i:i + batch_size] for i in range(0, len(y), batch_size)]
             num_batches = len(x_batches)
-
             
             for i in range(num_batches):
-                # with tqdm(total=1, desc=f"Batch {i+1}/{num_batches}", disable=(verbose == 0)) as pbar:
                 with tqdm(
                     total=1, 
                     dynamic_ncols=True,
                     desc=f"Batch {i+1}/{num_batches}",
-                    bar_format="{l_bar}{bar} {n_fmt}/{total_fmt} {postfix}",
+                    bar_format="{l_bar}{bar} {n_fmt}/{total_fmt} [{postfix}]",
                     disable=(verbose == 0)
                 ) as pbar:
                     y_pred = self.forward_propagate(x_batches[i])
@@ -217,10 +215,6 @@ class FFNN(Module):
             train_accuracy = (correct / sum(len(batch) for batch in y_batches)) * 100
             history["train_loss"].append(avg_batch_loss)
 
-            # if verbose == 1:
-                # print(f"Epoch {epoch+1}, Avg Loss: {avg_batch_loss:.4f}, Accuracy: {train_accuracy:.2f}%")
-                # iterator.set_postfix({"Epoch Loss": avg_batch_loss})
-            # if verbose == 1 and i == num_batches - 1:
             if verbose == 1:
                 print(f"Epoch {epoch+1}, Avg Loss: {avg_batch_loss:.4f}, Accuracy: {train_accuracy:.2f}%\n\n")
 
@@ -229,3 +223,8 @@ class FFNN(Module):
     def predict(self, x):
         return [1 if self(x).data > 0.5 else 0 for x in x]
         # return self.forward(X)
+
+    def accuracy_score(self, y_true, y_pred):
+        y_pred_labels = [1 if yout.data > 0.5 else 0 for yout in y_pred]
+        correct = sum(yt == yp for yt, yp in zip(y_true, y_pred_labels))
+        return correct / len(y_true) * 100

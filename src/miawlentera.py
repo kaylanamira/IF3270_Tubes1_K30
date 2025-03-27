@@ -4,6 +4,7 @@ import random
 import math
 from value import Value
 from tqdm import tqdm
+import json
 from utils import get_loss_function
 
 class Module:
@@ -144,6 +145,7 @@ class FFNN(Module):
         
         self.layers = [Layer(layer_sizes[i], layer_sizes[i+1], activation=activations[i]) for i in range(len(layer_sizes)-1)]
         self.loss_fn = get_loss_function(loss_function)
+        self.learning_parameters = {}
 
     def __call__(self, x):
         for layer in self.layers:
@@ -181,6 +183,10 @@ class FFNN(Module):
         - verbose (int):  0 (dont print) or 1 (print training progress)
         """
         history = {"train_loss": [], "val_loss": []}
+        self.learning_parameters = {
+             "learning_rate": lr,
+             "batch_size": batch_size
+        }
 
         for epoch in range(epochs):
             total_loss = 0
@@ -227,7 +233,69 @@ class FFNN(Module):
         return [1 if self(x).data > 0.5 else 0 for x in x]
         # return self.forward(X)
 
-    def accuracy_score(self, y_true, y_pred):
-        y_pred_labels = [1 if yout.data > 0.5 else 0 for yout in y_pred]
-        correct = sum(yt == yp for yt, yp in zip(y_true, y_pred_labels))
-        return correct / len(y_true) * 100
+    def get_final_weights(self):
+        return [
+            [
+                [w.data for w in neuron.w] + [neuron.b.data]
+                for neuron in layer.neurons
+            ] for layer in self.layers
+        ]
+    
+
+    def to_json(self):
+        return {
+            "training_config": {
+                "model": {
+                    "input_size": len(self.layers[0].neurons[0].w),
+                    "layers": [
+                        {
+                            "number_of_neurons": len(layer.neurons),
+                            "activation_function": layer.neurons[0].activation
+                        }
+                        for layer in self.layers
+                    ]
+                },
+                "learning_parameters": self.learning_parameters
+            },
+            "results": {
+                "final_weights": self.get_final_weights()
+            }
+        }
+    
+    def save(self, path):
+        data = self.to_json()
+        with open(path, 'w') as f:
+            json.dump(data, f, indent=2)
+
+    @staticmethod
+    def load(path):
+        with open(path, 'r') as f:
+            data = json.load(f)
+
+        config = data["training_config"]
+        model_info = config["model"]
+        layers = model_info["layers"]
+        layer_sizes = [model_info["input_size"]] + [l["number_of_neurons"] for l in layers]
+        activations = [l["activation_function"] for l in layers]
+
+        model = FFNN(layer_sizes, activations)
+
+       
+        final_weights = data.get("results", {}).get("final_weights", [])
+        if final_weights:
+            for layer, weights in zip(model.layers, final_weights):
+                for neuron, weight_bias in zip(layer.neurons, weights):
+                    *w, b = weight_bias
+                    neuron.w = [Value(v) for v in w]
+                    neuron.b = Value(b)
+
+        return model
+
+
+
+
+    
+    # def accuracy_score(self, y_true, y_pred):
+    #     y_pred_labels = [1 if yout.data > 0.5 else 0 for yout in y_pred]
+    #     correct = sum(yt == yp for yt, yp in zip(y_true, y_pred_labels))
+    #     return correct / len(y_true) * 100

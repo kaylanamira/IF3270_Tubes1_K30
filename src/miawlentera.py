@@ -4,6 +4,7 @@ import random
 import math
 from value import Value
 from tqdm import tqdm
+from utils import get_loss_function
 
 class Module:
     def zero_grad(self):
@@ -152,7 +153,7 @@ class FFNN(Module):
     def __init__(self, layer_sizes, activations, loss_function='mse'):
         
         self.layers = [Layer(layer_sizes[i], layer_sizes[i+1], activation=activations[i]) for i in range(len(layer_sizes)-1)]
-        # self.loss_function = get_loss(loss_function)
+        self.loss_fn = get_loss_function(loss_function)
 
     def __call__(self, x):
         for layer in self.layers:
@@ -225,7 +226,9 @@ class FFNN(Module):
                 ) as pbar:
                     y_pred = self.forward_propagate(x_batches[i])
                     # loss = sum(self.loss_fn(y_out, y_true) for y_out, y_true in zip(y_pred, batch_y))
-                    batch_loss = sum((yout - yt) ** 2 for yt, yout in zip(y_batches[i], y_pred))
+                    # batch_loss = sum((yout - yt) ** 2 for yt, yout in zip(y_batches[i], y_pred))
+                    batch_loss = self.loss_fn(y_pred, y_batches[i])
+
                     total_loss += batch_loss.data
 
                     y_pred_labels = [1 if yout.data > 0.5 else 0 for yout in y_pred] #binary classification

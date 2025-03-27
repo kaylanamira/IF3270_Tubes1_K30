@@ -1,4 +1,5 @@
 import math
+import numpy as np
 
 class Value:
     def __init__(self, data, _children=(), _op=''):
@@ -79,6 +80,16 @@ class Value:
         for v in reversed(topo):
             v._backward()
 
+    def log(self):
+        out = Value(math.log(self.data + 1e-12), (self,), 'log')  # prevent log(0)
+
+        def _backward():
+            self.grad += (1 / self.data) * out.grad
+        out._backward = _backward
+
+        return out
+
+
     def relu(self):
         out = Value(0 if self.data < 0 else self.data, (self,), 'relu')
 
@@ -87,6 +98,8 @@ class Value:
         out._backward = _backward
 
         return out
+
+
     
     def sigmoid(self):
         s = 1 / (1 + math.exp(-self.data))
@@ -169,24 +182,5 @@ class Value:
         return softmax_values
     
 
-
-x1 = Value(1)
-x2 = Value(2)
-x3 = Value(3)
-
-softmax_outputs = Value.softmax([x1, x2, x3])
-
-# Print results
-for i, s in enumerate(softmax_outputs):
-    print(f"Softmax[{i}]: {s}")
-
-# Simulate loss gradient
-softmax_outputs[0].grad = 1.0  # Example gradient from loss function
-softmax_outputs[0].backward_propagate()
-
-# Print gradients
-print(f"x1 grad: {x1.grad}")
-print(f"x2 grad: {x2.grad}")
-print(f"x3 grad: {x3.grad}")
 
         

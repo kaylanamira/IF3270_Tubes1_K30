@@ -96,7 +96,11 @@ class Neuron(Module):
 
     def get_weights(self):
         """Returns the weights and bias of the neuron."""
-        return self.w
+        return [self.b.data] + [w.data for w in self.w]
+    
+    def get_grads(self):
+        """Returns the gradients of the weights and bias of the neuron."""
+        return [self.b.grad] + [w.grad for w in self.w]
     
 class Layer(Module):
     """
@@ -128,6 +132,12 @@ class Layer(Module):
 
     def __repr__(self):
         return f"Layer of [{', '.join(str(n) for n in self.neurons)}]"
+    
+    def get_weights(self):
+        return [n.get_weights() for n in self.neurons]
+    
+    def get_grads(self):
+        return [n.get_grads() for n in self.neurons]
 
 class FFNN(Module):
     """
@@ -167,6 +177,22 @@ class FFNN(Module):
         for param in self.parameters():
             param.data += -lr * param.grad
 
+    def get_layer_weights(self, layer_indeces):
+        weights_dict = {}
+        for i in layer_indeces:
+            if i >= len(self.layers) or i < 0:
+                raise ValueError(f"Invalid layer index: {i}")
+            weights_dict[i] = self.layers[i].get_weights()
+        return weights_dict
+            
+    def get_layer_grads(self, layer_indeces):
+        grads_dict = {}
+        for i in layer_indeces:
+            if i >= len(self.layers) or i < 0:
+                raise ValueError(f"Invalid layer index: {i}")
+            grads_dict[i] = self.layers[i].get_grads()
+        return grads_dict
+    
     def fit(self, x, y, epochs=100, lr=0.01, batch_size=1, verbose=1):
         """
         Train the model .

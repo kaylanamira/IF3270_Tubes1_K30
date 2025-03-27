@@ -1,5 +1,4 @@
 import math
-import numpy as np
 
 class Value:
     def __init__(self, data, _children=(), _op=''):
@@ -63,6 +62,15 @@ class Value:
 
     def __repr__(self):
         return f"Value(data={self.data}, grad={self.grad})"
+    
+    def __abs__(self):
+        out = Value(abs(self.data), (self,), 'abs')
+
+        def _backward():
+            self.grad += (1 if self.data > 0 else -1 if self.data < 0 else 0) * out.grad
+        out._backward = _backward
+
+        return out
     
     def backward_propagate(self):
 

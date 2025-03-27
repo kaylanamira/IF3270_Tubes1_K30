@@ -237,6 +237,10 @@ class Layer(Module):
 
         if self.use_rmsnorm:
             raw_out = self.norm(raw_out)
+        if self.activation == "softmax":
+            softmaxed = self.softmax(raw_out)
+            return softmaxed
+        
         return [self.activate(o) for o in raw_out] if len(raw_out) > 1 else self.activate(raw_out[0])
 
     def activate(self, x):
@@ -257,8 +261,6 @@ class Layer(Module):
 
     def __repr__(self):
         return f"Layer(activation={self.activation}, use_rmsnorm={self.use_rmsnorm})"
-
-
     
     def softmax(self, values):
         data = [v.data for v in values]
@@ -405,6 +407,8 @@ class FFNN(Module):
             return [np.argmax([prob.data for prob in yout]) for yout in self.forward_propagate(x)]
         elif self.loss_function == "bce":
             return [0 if yout.data < 0.5 else 1 for yout in self.forward_propagate(x)] 
+        if self.loss_function == "mse":
+            return [yout for yout in self.forward_propagate(x)]
 
     def get_final_weights(self):
         return [

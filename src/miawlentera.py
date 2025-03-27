@@ -7,6 +7,19 @@ from tqdm import tqdm
 import json
 from utils import get_loss_function
 
+class RMSNorm:
+    def __init__(self, dim, epsilon=1e-5):
+        self.epsilon = Value(epsilon)
+        self.gamma = [Value(1.0) for _ in range(dim)]
+    
+    def __call__(self, x):
+        mean_sq = sum(xi ** 2 for xi in x) / Value(len(x))
+        norm_factor = (mean_sq + self.epsilon) ** 0.5
+        return [(xi / norm_factor) * self.gamma[i] for i, xi in enumerate(x)]
+
+    def parameters(self):
+        return self.gamma
+
 class Module:
     def zero_grad(self):
         """Reset gradients to zero for all parameters in the model."""
@@ -18,20 +31,100 @@ class Module:
         return []
 
 
+# class Neuron(Module):
+#     """
+#     A neuron with adjustable weights, bias, and activation function.
+
+#     Parameters:
+#     - n_in (int): Number of input features.
+#     - activation (str): Activation function ('linear', 'relu', 'sigmoid', 'tanh', 'leaky_relu', 'swish').
+#     - weight_init (str): Initialization method for weights ('zero', 'uniform', 'normal').
+#     - weight_params (dict): Parameters for weight initialization (mean/variance for normal, lower/upper for uniform).
+#     - seed (int, optional): Random seed for weight.
+#     """
+
+#     def __init__(self, n_in, activation='linear', weight_init='uniform', weight_params={}, seed=None):            
+#         self.activation = activation.lower()
+#         self.w, self.b = self.initialize_weights(n_in, weight_init, weight_params, seed)  
+
+#     def initialize_weights(self, n_in, weight_init, weight_params, seed):
+#         if seed is not None:
+#             random.seed(seed)
+
+#         if weight_init == 'zero':
+#             return ([Value(0) for _ in range(n_in)], Value(0))
+        
+#         if weight_init == 'uniform':
+#             lower = weight_params.get('lower', -1)
+#             upper = weight_params.get('upper', 1)
+#             return ([Value(random.uniform(lower, upper)) for _ in range(n_in)], Value(random.uniform(lower, upper)))
+        
+#         if weight_init == 'normal':
+#             mean = weight_params.get('mean', 0)
+#             variance = weight_params.get('variance', 1)
+#             std_dev = math.sqrt(variance)
+#             return ([Value(random.gauss(mean, std_dev)) for _ in range(n_in)], Value(random.gauss(mean, std_dev)))
+        
+#         # xavier initialization (uniform)
+#         if weight_init == 'xavier':
+#             limit = math.sqrt(1 / n_in)
+#             return ([Value(random.uniform(-limit, limit)) for _ in range(n_in)], Value(random.uniform(-limit, limit)))
+
+#         # he initialization (normal)
+#         if weight_init == 'he':
+#             std_dev = math.sqrt(2 / n_in)
+#             return ([Value(random.gauss(0, std_dev)) for _ in range(n_in)], Value(random.gauss(0, std_dev)))
+        
+#     def __call__(self, x):
+#         """
+#         Computes the output of the neuron given an input.
+
+#         Parameters:
+#         - x (list of Value): Input values.
+
+#         Returns:
+#         - Value: Activated neuron output.
+#         """
+#         net = sum((wi*xi for wi,xi in zip(self.w, x)), self.b)
+
+#         if self.activation == 'relu':
+#             return net.relu()
+#         if self.activation == 'sigmoid':
+#             return net.sigmoid()
+#         if self.activation == 'tanh':
+#             return net.tanh()
+#         if self.activation == 'leaky_relu':
+#             return net.leaky_relu()
+#         if self.activation == 'swish':
+#             return net.swish()
+#         if self.activation == 'softmax':
+#             return net.softmax()
+    
+#         return net
+
+#     def parameters(self):
+#         return self.w + [self.b]
+
+#     def __repr__(self):
+#         """Returns a readable string representation of the neuron."""
+#         return f"Neuron({len(self.w)}, activation={self.activation})"
+
+#     def get_weights(self):
+#         """Returns the weights and bias of the neuron."""
+#         return self.w
+
 class Neuron(Module):
     """
     A neuron with adjustable weights, bias, and activation function.
 
     Parameters:
     - n_in (int): Number of input features.
-    - activation (str): Activation function ('linear', 'relu', 'sigmoid', 'tanh', 'leaky_relu', 'swish').
     - weight_init (str): Initialization method for weights ('zero', 'uniform', 'normal').
     - weight_params (dict): Parameters for weight initialization (mean/variance for normal, lower/upper for uniform).
     - seed (int, optional): Random seed for weight.
     """
 
-    def __init__(self, n_in, activation='linear', weight_init='uniform', weight_params={}, seed=None):            
-        self.activation = activation.lower()
+    def __init__(self, n_in, weight_init='uniform', weight_params={}, seed=None):            
         self.w, self.b = self.initialize_weights(n_in, weight_init, weight_params, seed)  
 
     def initialize_weights(self, n_in, weight_init, weight_params, seed):
@@ -72,64 +165,99 @@ class Neuron(Module):
         Returns:
         - Value: Activated neuron output.
         """
-        net = sum((wi*xi for wi,xi in zip(self.w, x)), self.b)
-
-        if self.activation == 'relu':
-            return net.relu()
-        if self.activation == 'sigmoid':
-            return net.sigmoid()
-        if self.activation == 'tanh':
-            return net.tanh()
-        if self.activation == 'leaky_relu':
-            return net.leaky_relu()
-        if self.activation == 'swish':
-            return net.swish()
-        if self.activation == 'softmax':
-            return net.softmax()
-    
-        return net
+        return sum((wi*xi for wi,xi in zip(self.w, x)), self.b)
 
     def parameters(self):
         return self.w + [self.b]
 
     def __repr__(self):
         """Returns a readable string representation of the neuron."""
-        return f"Neuron({len(self.w)}, activation={self.activation})"
+        return f"Neuron({len(self.w)})"
 
     def get_weights(self):
         """Returns the weights and bias of the neuron."""
         return self.w
-    
-class Layer(Module):
-    """
-    A layer consisting of multiple neurons.
 
-    Parameters:
-    - n_in (int): Number of inputs to each neuron.
-    - n_neuron (int): Number of neurons in the layer.
-    - kwargs: Additional arguments passed to each neuron.
-    """
+    
+# class Layer(Module):
+#     """
+#     A layer consisting of multiple neurons.
+
+#     Parameters:
+#     - n_in (int): Number of inputs to each neuron.
+#     - n_neuron (int): Number of neurons in the layer.
+#     - kwargs: Additional arguments passed to each neuron.
+#     """
+#     def __init__(self, n_in, n_neuron, **kwargs):
+#         self.neurons = [Neuron(n_in, **kwargs) for _ in range(n_neuron)]
+
+#     def __call__(self, x):
+#         """
+#         Computes the output of the layer given an input.
+
+#         Parameters:
+#         - x (list of Value): Input values.
+
+#         Returns:
+#         - list of Value: Layer output (each neuron’s output).
+#         """
+#         out = [n(x) for n in self.neurons] #array of neuron outputs
+#         return out[0] if len(out) == 1 else out
+
+#     def parameters(self):
+#         return [p for n in self.neurons for p in n.parameters()]
+
+#     def __repr__(self):
+#         return f"Layer of [{', '.join(str(n) for n in self.neurons)}]"
+
+class Layer(Module):
+    # def __init__(self, n_in, n_neuron, **kwargs):
+    #     self.activation = kwargs.get("activation", "linear")
+    #     self.use_rmsnorm = kwargs.get("use_rmsnorm", False)
+    #     self.neurons = [Neuron(n_in, **kwargs) for _ in range(n_neuron)]
+    #     self.norm = RMSNorm(n_neuron) if self.use_rmsnorm else None
+
     def __init__(self, n_in, n_neuron, **kwargs):
-        self.neurons = [Neuron(n_in, **kwargs) for _ in range(n_neuron)]
+        self.activation = kwargs.get("activation", "linear")
+        self.use_rmsnorm = kwargs.get("use_rmsnorm", False)
+
+        neuron_kwargs = {
+            k: kwargs[k]
+            for k in ['weight_init', 'weight_params', 'seed']
+            if k in kwargs
+        }
+
+        self.neurons = [Neuron(n_in, **neuron_kwargs) for _ in range(n_neuron)]
+        self.norm = RMSNorm(n_neuron) if self.use_rmsnorm else None
+
 
     def __call__(self, x):
-        """
-        Computes the output of the layer given an input.
+        raw_out = [neuron(x) for neuron in self.neurons]
 
-        Parameters:
-        - x (list of Value): Input values.
+        if self.use_rmsnorm:
+            raw_out = self.norm(raw_out)
+        return [self.activate(o) for o in raw_out] if len(raw_out) > 1 else self.activate(raw_out[0])
 
-        Returns:
-        - list of Value: Layer output (each neuron’s output).
-        """
-        out = [n(x) for n in self.neurons] #array of neuron outputs
-        return out[0] if len(out) == 1 else out
+    def activate(self, x):
+        return {
+            'relu': x.relu(),
+            'sigmoid': x.sigmoid(),
+            'tanh': x.tanh(),
+            'swish': x.swish(),
+            'leaky_relu': x.leaky_relu(),
+            'linear': x
+        }.get(self.activation, x)
 
     def parameters(self):
-        return [p for n in self.neurons for p in n.parameters()]
+        params = [p for neuron in self.neurons for p in neuron.parameters()]
+        if self.use_rmsnorm:
+            params += self.norm.parameters()
+        return params
 
     def __repr__(self):
-        return f"Layer of [{', '.join(str(n) for n in self.neurons)}]"
+        return f"Layer(activation={self.activation}, use_rmsnorm={self.use_rmsnorm})"
+
+
 
 class FFNN(Module):
     """
@@ -141,11 +269,15 @@ class FFNN(Module):
     - activations (str): Activation function to use.
     - loss_function (str): Loss function to use.
     """
-    def __init__(self, layer_sizes, activations, loss_function='mse'):
-        
-        self.layers = [Layer(layer_sizes[i], layer_sizes[i+1], activation=activations[i]) for i in range(len(layer_sizes)-1)]
+    def __init__(self, layer_sizes, activations, loss_function='mse', use_rmsnorm=False, **kwargs):
+        self.layers = [
+            Layer(layer_sizes[i], layer_sizes[i+1], activation=activations[i], use_rmsnorm=use_rmsnorm, **kwargs)
+            for i in range(len(layer_sizes) - 1)
+        ]
         self.loss_fn = get_loss_function(loss_function)
-        self.learning_parameters = {}
+        self.learning_parameters = {
+            "use_rmsnorm": use_rmsnorm
+        }
 
     def __call__(self, x):
         for layer in self.layers:
@@ -170,7 +302,7 @@ class FFNN(Module):
         for param in self.parameters():
             param.data += -lr * param.grad
 
-    def fit(self, x, y, epochs=100, lr=0.01, batch_size=1, verbose=1):
+    def fit(self, x, y, epochs=100, lr=0.01, batch_size=1, verbose=1,regularization_type=None, lambda_reg=0.0):
         """
         Train the model .
 
@@ -183,10 +315,14 @@ class FFNN(Module):
         - verbose (int):  0 (dont print) or 1 (print training progress)
         """
         history = {"train_loss": [], "val_loss": []}
-        self.learning_parameters = {
-             "learning_rate": lr,
-             "batch_size": batch_size
-        }
+        self.learning_parameters.update({
+            "learning_rate": lr,
+            "batch_size": batch_size,
+            "epochs": epochs,
+            "regularization_type": regularization_type,
+            "lambda": lambda_reg
+        })
+
 
         for epoch in range(epochs):
             total_loss = 0
@@ -208,6 +344,14 @@ class FFNN(Module):
                     # loss = sum(self.loss_fn(y_out, y_true) for y_out, y_true in zip(y_pred, batch_y))
                     # batch_loss = sum((yout - yt) ** 2 for yt, yout in zip(y_batches[i], y_pred))
                     batch_loss = self.loss_fn(y_pred, y_batches[i])
+
+                    # regularization
+                    if regularization_type == 'l1':
+                        reg_term = lambda_reg * sum(abs(p) for p in self.parameters())
+                        batch_loss += reg_term
+                    elif regularization_type == 'l2':
+                        reg_term = lambda_reg * sum((p * p) for p in self.parameters())
+                        batch_loss += reg_term
 
                     total_loss += batch_loss.data
 
@@ -250,7 +394,8 @@ class FFNN(Module):
                     "layers": [
                         {
                             "number_of_neurons": len(layer.neurons),
-                            "activation_function": layer.neurons[0].activation
+                            "activation_function": layer.activation,
+                            "use_rmsnorm": layer.use_rmsnorm
                         }
                         for layer in self.layers
                     ]
@@ -261,7 +406,7 @@ class FFNN(Module):
                 "final_weights": self.get_final_weights()
             }
         }
-    
+
     def save(self, path):
         data = self.to_json()
         with open(path, 'w') as f:
@@ -275,12 +420,16 @@ class FFNN(Module):
         config = data["training_config"]
         model_info = config["model"]
         layers = model_info["layers"]
+
+        # Build FFNN config from saved structure
         layer_sizes = [model_info["input_size"]] + [l["number_of_neurons"] for l in layers]
         activations = [l["activation_function"] for l in layers]
+        use_rmsnorm = config["learning_parameters"].get("use_rmsnorm", False)
 
-        model = FFNN(layer_sizes, activations)
+        # Construct model
+        model = FFNN(layer_sizes, activations, use_rmsnorm=use_rmsnorm)
 
-       
+        # Load saved weights
         final_weights = data.get("results", {}).get("final_weights", [])
         if final_weights:
             for layer, weights in zip(model.layers, final_weights):

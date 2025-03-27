@@ -84,8 +84,6 @@ class Neuron(Module):
             return net.leaky_relu()
         if self.activation == 'swish':
             return net.swish()
-        if self.activation == 'softmax':
-            return net.softmax()
     
         return net
 
@@ -111,6 +109,7 @@ class Layer(Module):
     """
     def __init__(self, n_in, n_neuron, **kwargs):
         self.neurons = [Neuron(n_in, **kwargs) for _ in range(n_neuron)]
+        self.activation = kwargs.get('activation', None)
 
     def __call__(self, x):
         """
@@ -122,14 +121,42 @@ class Layer(Module):
         Returns:
         - list of Value: Layer output (each neuron’s output).
         """
-        out = [n(x) for n in self.neurons] #array of neuron outputs
-        return out[0] if len(out) == 1 else out
+
+        if self.activation == 'softmax':
+            softmaxed = self.softmax(x)
+            return softmaxed
+        else:
+            out = [n(x) for n in self.neurons]
+            return out[0] if len(out) == 1 else out
 
     def parameters(self):
         return [p for n in self.neurons for p in n.parameters()]
 
     def __repr__(self):
         return f"Layer of [{', '.join(str(n) for n in self.neurons)}]"
+    
+    def softmax(self, values):
+        data = [v.data for v in values]
+        
+        max_val = max(data)
+        exp_shifted = [math.exp(v.data - max_val) for v in values]
+        sum_exp = sum(exp_shifted)
+
+        softmax_values = [
+            Value(e / sum_exp, (v,), 'softmax') for v, e in zip(values, exp_shifted)
+        ]
+
+        def _backward():
+            for i, v_i in enumerate(softmax_values):
+                for j, v_j in enumerate(values):
+                    delta_ij = 1 if i == j else 0
+                    grad = v_i.data * (delta_ij - softmax_values[j].data) * v_i.grad
+                    v_j.grad += grad
+
+        for v in softmax_values:
+            v._backward = _backward
+
+        return softmax_values
 
 class FFNN(Module):
     """

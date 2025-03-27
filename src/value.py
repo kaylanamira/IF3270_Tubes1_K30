@@ -157,30 +157,4 @@ class Value:
     #         v._backward = _backward
 
     #     return softmax_values
-    
-    def softmax(values):
-        data = [v.data for v in values]
-        
-        max_val = max(data)
-        exp_shifted = [math.exp(v.data - max_val) for v in values]
-        sum_exp = sum(exp_shifted)
-
-        softmax_values = [
-            Value(e / sum_exp, (v,), 'softmax') for v, e in zip(values, exp_shifted)
-        ]
-
-        def _backward():
-            for i, v_i in enumerate(softmax_values):
-                for j, v_j in enumerate(values):
-                    delta_ij = 1 if i == j else 0
-                    grad = v_i.data * (delta_ij - v_j.data) * v_i.grad
-                    v_j.grad += grad
-
-        for v in softmax_values:
-            v._backward = _backward
-
-        return softmax_values
-    
-
-
         

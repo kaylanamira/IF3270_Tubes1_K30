@@ -1,42 +1,54 @@
-from src.miawlentera import FFNN, Layer
-import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.datasets import make_classification
+from sklearn.model_selection import train_test_split
 
-# Generate a linearly separable dataset
-X, y = make_classification(n_samples=100, n_features=2, n_redundant=0, 
-                           n_informative=2, random_state=1, n_clusters_per_class=1)
+# Generate a more linearly separable dataset with 4 classes
+X, y = make_classification(n_samples=200,  # Increased samples for better visualization
+                           n_features=2,
+                           n_redundant=0,
+                           n_informative=2,
+                           random_state=1,
+                           n_clusters_per_class=1,
+                           n_classes=2,
+                           class_sep=4.0)  # Increase separation between classes
 
-print(type(X))
+# Split the dataset into training and testing sets
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)  # 80% train, 20% test
 
-layer = Layer(1, 3, weight_init='normal', weight_params={'variance': 1, 'mean': 45}, seed=20)
+# Plot the training and testing sets
+plt.figure(figsize=(12, 6))
 
-print([(neuron.w, neuron.b) for neuron in layer.neurons])
+# Training set plot
+plt.subplot(1, 2, 1)  # 1 row, 2 columns, plot 1
+plt.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=plt.cm.RdYlBu, edgecolors='k')
+plt.title('Training Set')
+plt.xlabel('Feature 1')
+plt.ylabel('Feature 2')
+plt.colorbar(ticks=[0, 1, 2, 3])
 
-lr = 0.0001
-model = FFNN([
-    Layer(1, 3, activation=''),
-    Layer(3, 3, activation=''),
-    Layer(3, 1, activation='leaky_relu'),
-])
-n_epoch = 500
+# Testing set plot
+plt.subplot(1, 2, 2)  # 1 row, 2 columns, plot 2
+plt.scatter(X_test[:, 0], X_test[:, 1], c=y_test, cmap=plt.cm.RdYlBu, edgecolors='k')
+plt.title('Testing Set')
+plt.xlabel('Feature 1')
+plt.ylabel('Feature 2')
+plt.colorbar(ticks=[0, 1, 2, 3])
 
-print([neuron for layer in model.layers for neuron in layer.neurons])
+from sklearn.preprocessing import LabelEncoder
+import numpy as np
 
-for k in range(n_epoch):
-    # Forward pass
-    y_pred = [model(x) for x in X]
-    loss = sum((yout - yt) ** 2 for yt, yout in zip(y, y_pred))
+encoder = LabelEncoder() # sparse=False returns a NumPy array
+y_label_encode = encoder.fit_transform(y.reshape(-1, 1))
 
-    # Calculate accuracy
-    y_pred_labels = [1 if yout.data > 0.5 else 0 for yout in y_pred]
-    accuracy = sum(yt == y_pred_label for yt, y_pred_label in zip(y, y_pred_labels)) / len(y)
+import importlib
+import miawlentera
+importlib.reload(miawlentera)
+from miawlentera import FFNN
 
-    # Backward pass
-    model.zero_grad()
-    loss.backward_propagate()
+model = FFNN(
+    layer_sizes=[2, 1], 
+    activations=['sigmoid'], 
+    loss_function='bce'
+)
 
-    for p in model.parameters():
-        p.data += -lr * p.grad
-
-    print(f"Epoch {k + 1}, Loss: {loss.data}, Accuracy: {accuracy * 100:.2f}%")
+history = model.fit(X, y_label_encode, epochs=20, batch_size=2, lr=0.01, verbose=1)

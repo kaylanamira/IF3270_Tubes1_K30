@@ -13,11 +13,11 @@ def get_loss_function(name):
         def binary_cross_entropy(y_pred, y_true):
             n = len(y_pred)
             epsilon = Value(1e-12)
-            total = sum(
+            total = -sum(
                 yt * (yp + epsilon).log() + (Value(1) - yt) * (Value(1) - yp + epsilon).log()
                 for yp, yt in zip(y_pred, y_true)
             )
-            return -total / n
+            return total / n
         return binary_cross_entropy
 
     elif name == 'cce':

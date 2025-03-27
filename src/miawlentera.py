@@ -2,6 +2,7 @@
 
 import random
 import math
+import numpy as np
 from value import Value
 from tqdm import tqdm
 import json
@@ -137,7 +138,6 @@ class Layer(Module):
     
     def softmax(self, values):
         data = [v.data for v in values]
-        
         max_val = max(data)
         exp_shifted = [math.exp(v.data - max_val) for v in values]
         sum_exp = sum(exp_shifted)
@@ -169,9 +169,9 @@ class FFNN(Module):
     - loss_function (str): Loss function to use.
     """
     def __init__(self, layer_sizes, activations, loss_function='mse'):
-        
         self.layers = [Layer(layer_sizes[i], layer_sizes[i+1], activation=activations[i]) for i in range(len(layer_sizes)-1)]
         self.loss_fn = get_loss_function(loss_function)
+        self.loss_function = loss_function
         self.learning_parameters = {}
 
     def __call__(self, x):
@@ -232,14 +232,16 @@ class FFNN(Module):
                     disable=(verbose == 0)
                 ) as pbar:
                     y_pred = self.forward_propagate(x_batches[i])
-                    # loss = sum(self.loss_fn(y_out, y_true) for y_out, y_true in zip(y_pred, batch_y))
-                    # batch_loss = sum((yout - yt) ** 2 for yt, yout in zip(y_batches[i], y_pred))
                     batch_loss = self.loss_fn(y_pred, y_batches[i])
-
                     total_loss += batch_loss.data
-
-                    y_pred_labels = [1 if yout.data > 0.5 else 0 for yout in y_pred] #binary classification
-                    correct += sum(yt == y_pred_label for yt, y_pred_label in zip(y_batches[i], y_pred_labels))
+                    
+                    if self.loss_function == "cce":
+                        y_pred_labels = [np.argmax([prob.data for prob in yout]) for yout in y_pred]    
+                        correct += sum(yt == y_pred_label for yt, y_pred_label in zip((np.argmax(y) for y in y_batches[i]), y_pred_labels))
+                    elif self.loss_function == "bce":
+                        y_pred_labels = [0 if y.data < 0.5 else 1 for y in y_pred] 
+                        print(y_pred_labels)
+                        correct += sum(yt == y_pred_label for yt, y_pred_label in zip(y_batches[i], y_pred_labels)) 
 
                     self.backward_propagate(batch_loss)
                     self.update_weights(lr)
@@ -257,8 +259,10 @@ class FFNN(Module):
         return history
 
     def predict(self, x):
-        return [1 if self(x).data > 0.5 else 0 for x in x]
-        # return self.forward(X)
+        if self.loss_function == "cce":
+            return [np.argmax([prob.data for prob in yout]) for yout in self.forward_propagate(x)]
+        elif self.loss_function == "bce":
+            return [0 if yout.data < 0.5 else 1 for yout in self.forward_propagate(x)] 
 
     def get_final_weights(self):
         return [

@@ -1,0 +1,53 @@
+{
+  "training_config": {
+    "model": {
+      "input_size": 1,
+      "layers": [
+        {
+          "number_of_neurons": 3,
+          "activation_function": "sigmoid",
+          "use_rmsnorm": true
+        },
+        {
+          "number_of_neurons": 1,
+          "activation_function": "sigmoid",
+          "use_rmsnorm": true
+        }
+      ]
+    },
+    "learning_parameters": {
+      "use_rmsnorm": true,
+      "learning_rate": 0.05,
+      "batch_size": 50,
+      "epochs": 10,
+      "regularization_type": null,
+      "lambda": 0.0
+    }
+  },
+  "results": {
+    "final_weights": [
+      [
+        [
+          -0.2574029292274067,
+          0.10780909629944192
+        ],
+        [
+          0.6459697926701771,
+          -0.7017165952237656
+        ],
+        [
+          0.5457674847339526,
+          0.39771346291211507
+        ]
+      ],
+      [
+        [
+          0.628704970522449,
+          0.37903544654171306,
+          0.32625477552644505,
+          0.042565490058231285
+        ]
+      ]
+    ]
+  }
+}

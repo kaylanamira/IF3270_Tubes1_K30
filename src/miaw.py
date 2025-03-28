@@ -1,11 +1,10 @@
 # NumPy-based FFNN with enhancements
 import numpy as np
-import json
 import matplotlib.pyplot as plt
 import seaborn as sns
+import json
 from tqdm import tqdm
 
-# Activation functions and derivatives
 def relu(x):
     return np.maximum(0, x)
 
@@ -38,13 +37,30 @@ def softmax(x):
 def d_softmax_crossentropy(y_pred, y_true):
     return (y_pred - y_true) / y_true.shape[0]
 
+def leaky_relu(x):
+    return np.where(x > 0, x, 0.01 * x)
+
+def d_leaky_relu(x):
+    return np.where(x > 0, 1, 0.01)
+
+def swish(x):
+    s = sigmoid(x)
+    sw = s * x
+    return sw
+
+def d_swish(x):
+    s = sigmoid(x)
+    return s * (1 + x * (1 - s))
+
 def get_activation(name):
     return {
         'relu': (relu, d_relu),
         'sigmoid': (sigmoid, d_sigmoid),
         'tanh': (tanh, d_tanh),
         'linear': (linear, d_linear),
-        'softmax': (softmax, None)
+        'softmax': (softmax, None),
+        'leaky_relu': (leaky_relu, d_leaky_relu),
+        'swish': (swish, d_swish),
     }[name]
 
 # Loss functions
@@ -74,7 +90,6 @@ class Layer:
         self.activation_name = activation
         self.act_fn, self.d_act_fn = get_activation(activation)
         self.use_rmsnorm = use_rmsnorm
-        self.grad = 0
 
         if weight_init == 'xavier':
             limit = np.sqrt(6 / (n_in + n_out))
@@ -180,7 +195,7 @@ class FFNN:
 
     def fit(self, x, y, x_val, y_val, epochs=100, lr=0.01, batch_size=32, verbose=1, lambda_reg=0.0):
         reg_type = self.learning_parameters["reg_type"]
-        history = {'train_loss': [], 'val_loss': []}
+        history = {'loss': [], 'batch_losses': []}
         for epoch in range(epochs):
             indices = np.arange(x.shape[0])
             np.random.shuffle(indices)
@@ -220,7 +235,7 @@ class FFNN:
             history['train_loss'].append(avg_train_loss)
             history['val_loss'].append(val_loss)
             if verbose:
-                print(f"Epoch {epoch+1} Completed, Train Loss: {avg_train_loss:.4f}, Val Loss:{val_loss:.4f}")
+                print(f"Epoch {epoch+1} Completed - Train Loss: {avg_train_loss:.4f} - Val Loss: {val_loss:.4f}")
 
         return history
 
@@ -298,28 +313,8 @@ class FFNN:
         return model
     
     def plot_weight_distribution(self, layer_indices):
-        plt.figure(figsize=(5, 3))
+        plt.figure(figsize=(10, 5))
         sns.set_style("whitegrid")
-
-        for idx in layer_indices:
-            if idx >= len(self.layers):
-                print(f"Layer {idx+1} dont exists.")
-                continue
-
-            if idx == 0:
-                continue
-
-            weights = self.layers[idx].W.flatten()
-            sns.kdeplot(weights, label=f'Layer {idx+1}', fill=True, alpha=0.4, bw_adjust=0.5)
-
-        plt.xlabel('Weight Value')
-        plt.ylabel('Density')
-        plt.title('Weight Distribution per Layer')
-        plt.legend()
-        plt.show()
-
-    def plot_gradient_distribution(self, layer_indices):
-        plt.figure(figsize=(5, 3))
 
         for idx in layer_indices:
             if idx >= len(self.layers):
@@ -329,22 +324,32 @@ class FFNN:
             if idx == 0:
                 continue
 
-            gradients = self.layers[idx].dW.flatten()
+            weights = self.layers[idx].W.flatten()
+            # plt.hist(weights, bins=20, alpha=0.6, label=f'Layer {idx+1}')
+            sns.kdeplot(weights, label=f'Layer {idx+1}', fill=True, alpha=0.4, bw_adjust=0.5)
+
+        plt.xlabel('Weight Value')
+        plt.ylabel('Density')
+        plt.title('Weight Distribution per Layer')
+        plt.legend()
+        plt.show()
+
+    def plot_gradient_distribution(self, layer_indices):
+        plt.figure(figsize=(10, 5))
+
+        for idx in layer_indices:
+            if idx >= len(self.layers):
+                print(f"Layer {idx} dont exists.")
+                continue
+
+            if idx == 0:
+                continue
+
+            gradients = np.array([grad for grad in self.layers[idx].get_grads()]).flatten()
             sns.kdeplot(gradients, label=f'Layer {idx+1}', fill=True, alpha=0.4, bw_adjust=0.5)
 
         plt.xlabel('Gradient Value')
         plt.ylabel('Density')
         plt.title('Gradient Distribution per Layer')
         plt.legend()
-        plt.show()
-
-    def plot_loss_history(self,history):
-        plt.figure(figsize=(4, 3))
-        plt.plot(history["train_loss"], label="Training Loss", marker='o')
-        plt.plot(history["val_loss"], label="Validation Loss", marker='s')
-        plt.xlabel("Epochs")
-        plt.ylabel("Loss")
-        plt.title("Training & Validation Loss Over Epochs")
-        plt.legend()
-        plt.grid(True)
         plt.show()

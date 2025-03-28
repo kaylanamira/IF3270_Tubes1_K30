@@ -23,89 +23,80 @@ class RMSNorm:
     def parameters(self):
         return self.gamma
 
-class Module:
-    def zero_grad(self):
-        """Reset gradients to zero for all parameters in the model."""
-        for p in self.parameters():
-            p.grad = 0  
+    class Module:
+        def zero_grad(self):
+            """Reset gradients to zero for all parameters in the model."""
+            for p in self.parameters():
+                p.grad = 0  
 
-    def parameters(self):
-        """Returns a list of parameters to be updated during training."""
-        return []
+        def parameters(self):
+            """Returns a list of parameters to be updated during training."""
+            return []
 
-class Neuron(Module):
-    """
-    A neuron with adjustable weights, bias, and activation function.
-
-    Parameters:
-    - n_in (int): Number of input features.
-    - weight_init (str): Initialization method for weights ('zero', 'uniform', 'normal').
-    - weight_params (dict): Parameters for weight initialization (mean/variance for normal, lower/upper for uniform).
-    - seed (int, optional): Random seed for weight.
-    """
-
-    def __init__(self, n_in, weight_init='uniform', weight_params={}, seed=None):    
-        self.n_in = n_in        
-        if (n_in > 0):
-            self.w, self.b = self.initialize_weights(n_in, weight_init, weight_params, seed)  
-        else:
-            self.w, self.b = [Value(0)], Value(0)
-            
-
-    def initialize_weights(self, n_in, weight_init, weight_params, seed):
-        if seed is not None:
-            random.seed(seed)
-
-        if weight_init == 'zero':
-            return ([Value(0) for _ in range(n_in)], Value(0))
-        
-        if weight_init == 'uniform':
-            lower = weight_params.get('lower', -1)
-            upper = weight_params.get('upper', 1)
-            return ([Value(random.uniform(lower, upper)) for _ in range(n_in)], Value(random.uniform(lower, upper)))
-        
-        if weight_init == 'normal':
-            mean = weight_params.get('mean', 0)
-            variance = weight_params.get('variance', 1)
-            std_dev = math.sqrt(variance)
-            return ([Value(random.gauss(mean, std_dev)) for _ in range(n_in)], Value(random.gauss(mean, std_dev)))
-        
-        # xavier initialization (uniform)
-        if weight_init == 'xavier':
-            limit = math.sqrt(1 / n_in)
-            return ([Value(random.uniform(-limit, limit)) for _ in range(n_in)], Value(random.uniform(-limit, limit)))
-
-        # he initialization (normal)
-        if weight_init == 'he':
-            std_dev = math.sqrt(2 / n_in)
-            return ([Value(random.gauss(0, std_dev)) for _ in range(n_in)], Value(random.gauss(0, std_dev)))
-        
-    def __call__(self, x):
+    class Neuron(Module):
         """
-        Computes the output of the neuron given an input.
+        A neuron with adjustable weights, bias, and activation function.
 
         Parameters:
-        - x (list of Value): Input values.
-
-        Returns:
-        - Value: Activated neuron output.
+        - n_in (int): Number of input features.
+        - weight_init (str): Initialization method for weights ('zero', 'uniform', 'normal').
+        - weight_params (dict): Parameters for weight initialization (mean/variance for normal, lower/upper for uniform).
+        - seed (int, optional): Random seed for weight.
         """
-        return sum((wi*xi for wi,xi in zip(self.w, x)), self.b)
 
-    def parameters(self):
-        return self.w + [self.b]
+        def __init__(self, n_in, weight_init='uniform', weight_params={}, seed=None):    
+            self.n_in = n_in        
+            if (n_in > 0):
+                self.w, self.b = self.initialize_weights(n_in, weight_init, weight_params, seed)  
+            else:
+                self.w, self.b = [Value(0)], Value(0)
+                
 
-    def __repr__(self):
-        """Returns a readable string representation of the neuron."""
-        return f"Neuron({len(self.w)})"
+        def initialize_weights(self, n_in, weight_init, weight_params, seed):
+            if seed is not None:
+                random.seed(seed)
 
-    def get_weights(self):
-        """Returns the weights and bias of the neuron."""
-        return [self.b.data] + [w.data for w in self.w]
-    
-    def get_grads(self):
-        """Returns the gradients of the weights and bias of the neuron."""
-        return [self.b.grad] + [w.grad for w in self.w]
+            if weight_init == 'zero':
+                return ([Value(0) for _ in range(n_in)], Value(0))
+            
+            if weight_init == 'uniform':
+                lower = weight_params.get('lower', -1)
+                upper = weight_params.get('upper', 1)
+                return ([Value(random.uniform(lower, upper)) for _ in range(n_in)], Value(random.uniform(lower, upper)))
+            
+            if weight_init == 'normal':
+                mean = weight_params.get('mean', 0)
+                variance = weight_params.get('variance', 1)
+                std_dev = math.sqrt(variance)
+                return ([Value(random.gauss(mean, std_dev)) for _ in range(n_in)], Value(random.gauss(mean, std_dev)))
+            
+            # xavier initialization (uniform)
+            if weight_init == 'xavier':
+                limit = math.sqrt(1 / n_in)
+                return ([Value(random.uniform(-limit, limit)) for _ in range(n_in)], Value(random.uniform(-limit, limit)))
+
+            # he initialization (normal)
+            if weight_init == 'he':
+                std_dev = math.sqrt(2 / n_in)
+                return ([Value(random.gauss(0, std_dev)) for _ in range(n_in)], Value(random.gauss(0, std_dev)))
+            
+        def __call__(self, x):
+            return sum((wi*xi for wi,xi in zip(self.w, x)), self.b)
+
+        def parameters(self):
+            return self.w + [self.b]
+
+        def __repr__(self):
+            """Returns a readable string representation of the neuron."""
+            return f"Neuron({len(self.w)})"
+
+        def get_weights(self):
+            """Returns the weights and bias of the neuron."""
+            return [self.b.data] + [w.data for w in self.w]
+        
+        def get_grads(self):
+            """Returns the gradients of the weights and bias of the neuron."""
+            return [self.b.grad] + [w.grad for w in self.w]
     
 class Layer(Module):
 

@@ -121,11 +121,21 @@ class Layer:
 
 class FFNN:
     def __init__(self, layer_sizes, activations, loss_function='mse', weight_init='xavier', use_rmsnorm=False):
+        self.layer_sizes = layer_sizes
+        self.activations = activations
+        self.use_rmsnorm = use_rmsnorm
+        self.weight_init = weight_init
+        self.loss_function = loss_function
+        self.learning_parameters = {
+            "loss_function" : self.loss_function,
+            "weight_init" : weight_init,
+            "use_rmsnorm" : use_rmsnorm,
+        }
+
         self.layers = []
         for i in range(len(layer_sizes) - 1):
             self.layers.append(Layer(layer_sizes[i], layer_sizes[i+1], activations[i], weight_init, use_rmsnorm))
 
-        self.loss_function = loss_function
         if loss_function == 'mse':
             self.loss_fn = mse
             self.d_loss_fn = d_mse
@@ -220,6 +230,61 @@ class FFNN:
 
     def set_weights(self, weights):
         for layer, (W, b) in zip(self.layers, weights):
-            layer.W = W
-            layer.b = b
+            layer.W = np.array(W)
+            layer.b = np.array(b).flatten()  # Ensure bias is 1D
 
+
+    def to_json(self):
+        return {
+            "training_config": {
+                "model": {
+                    "input_size": self.layer_sizes[0],
+                    "layers": [
+                        {
+                            "number_of_neurons": self.layer_sizes[i+1],
+                            "activation_function": self.activations[i],
+                            "use_rmsnorm": self.use_rmsnorm
+                        }
+                        for i in range(len(self.activations))
+                    ]
+                },
+                "learning_parameters": self.learning_parameters
+            },
+            "results": {
+                "final_weights": [
+                    [w.tolist() + [b.tolist()] for w, b in zip(layer.W, layer.b.reshape(-1, 1))]
+                    for layer in self.layers
+                ]
+            }
+        }
+
+    def save(self, path):
+        with open(path, 'w') as f:
+            json.dump(self.to_json(), f, indent=2)
+
+    @staticmethod
+    def load(path):
+        with open(path, 'r') as f:
+            data = json.load(f)
+
+        config = data["training_config"]
+        model_info = config["model"]
+        layers = model_info["layers"]
+
+        layer_sizes = [model_info["input_size"]] + [l["number_of_neurons"] for l in layers]
+        activations = [l["activation_function"] for l in layers]
+        use_rmsnorm = layers[0].get("use_rmsnorm", False)
+
+        model = FFNN(layer_sizes, activations, use_rmsnorm=use_rmsnorm)
+
+        final_weights = data.get("results", {}).get("final_weights", [])
+        if final_weights:
+            weights = []
+            for layer_weights in final_weights:
+                W = [w[:-1] for w in layer_weights]
+                B = [w[-1] for w in layer_weights]
+                weights.append((np.array(W), np.array(B).flatten())) 
+            model.set_weights(weights)
+
+
+        return model

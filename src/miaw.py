@@ -120,7 +120,7 @@ class Layer:
         return dx, dW, db
 
 class FFNN:
-    def __init__(self, layer_sizes, activations, loss_function='mse', weight_init='xavier', use_rmsnorm=False):
+    def __init__(self, layer_sizes, activations, loss_function='mse', weight_init='xavier', use_rmsnorm=False, reg_type=None):
         self.layer_sizes = layer_sizes
         self.activations = activations
         self.use_rmsnorm = use_rmsnorm
@@ -130,6 +130,7 @@ class FFNN:
             "loss_function" : self.loss_function,
             "weight_init" : weight_init,
             "use_rmsnorm" : use_rmsnorm,
+            "reg_type" : reg_type
         }
 
         self.layers = []
@@ -174,7 +175,8 @@ class FFNN:
             layer.W -= lr * dW
             layer.b -= lr * db
 
-    def fit(self, x, y, epochs=100, lr=0.01, batch_size=32, verbose=1, reg_type=None, lambda_reg=0.0):
+    def fit(self, x, y, epochs=100, lr=0.01, batch_size=32, verbose=1, lambda_reg=0.0):
+        reg_type = self.learning_parameters["reg_type"]
         history = {'loss': [], 'batch_losses': []}
         for epoch in range(epochs):
             indices = np.arange(x.shape[0])

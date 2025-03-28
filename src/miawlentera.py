@@ -3,7 +3,9 @@
 import random
 import math
 import numpy as np
+import matplotlib.pyplot as plt
 from value import Value
+import seaborn as sns
 from tqdm import tqdm
 import json
 from utils import get_loss_function
@@ -376,11 +378,44 @@ class FFNN(Module):
 
         return model
 
+    def plot_weight_distribution(self, layer_indices):
+        plt.figure(figsize=(10, 5))
+        sns.set_style("whitegrid")
 
+        for idx in layer_indices:
+            if idx >= len(self.layers):
+                print(f"Layer {idx} dont exists.")
+                continue
 
+            if idx == 0:
+                continue
 
-    
-    # def accuracy_score(self, y_true, y_pred):
-    #     y_pred_labels = [1 if yout.data > 0.5 else 0 for yout in y_pred]
-    #     correct = sum(yt == yp for yt, yp in zip(y_true, y_pred_labels))
-    #     return correct / len(y_true) * 100
+            weights = np.array([w for w in self.layers[idx].get_weights()]).flatten()
+            # plt.hist(weights, bins=20, alpha=0.6, label=f'Layer {idx+1}')
+            sns.kdeplot(weights, label=f'Layer {idx+1}', fill=True, alpha=0.4, bw_adjust=0.5)
+
+        plt.xlabel('Weight Value')
+        plt.ylabel('Density')
+        plt.title('Weight Distribution per Layer')
+        plt.legend()
+        plt.show()
+
+    def plot_gradient_distribution(self, layer_indices):
+        plt.figure(figsize=(10, 5))
+
+        for idx in layer_indices:
+            if idx >= len(self.layers):
+                print(f"Layer {idx} dont exists.")
+                continue
+
+            if idx == 0:
+                continue
+
+            gradients = np.array([grad for grad in self.layers[idx].get_grads()]).flatten()
+            sns.kdeplot(gradients, label=f'Layer {idx+1}', fill=True, alpha=0.4, bw_adjust=0.5)
+
+        plt.xlabel('Gradient Value')
+        plt.ylabel('Density')
+        plt.title('Gradient Distribution per Layer')
+        plt.legend()
+        plt.show()

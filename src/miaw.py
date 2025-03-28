@@ -195,7 +195,7 @@ class FFNN:
 
     def fit(self, x, y, x_val, y_val, epochs=100, lr=0.01, batch_size=32, verbose=1, lambda_reg=0.0):
         reg_type = self.learning_parameters["reg_type"]
-        history = {'loss': [], 'batch_losses': []}
+        history = {'train_loss': [], 'val_loss': []}
         for epoch in range(epochs):
             indices = np.arange(x.shape[0])
             np.random.shuffle(indices)
@@ -313,7 +313,7 @@ class FFNN:
         return model
     
     def plot_weight_distribution(self, layer_indices):
-        plt.figure(figsize=(10, 5))
+        plt.figure(figsize=(5, 3))
         sns.set_style("whitegrid")
 
         for idx in layer_indices:
@@ -335,7 +335,7 @@ class FFNN:
         plt.show()
 
     def plot_gradient_distribution(self, layer_indices):
-        plt.figure(figsize=(10, 5))
+        plt.figure(figsize=(5, 3))
 
         for idx in layer_indices:
             if idx >= len(self.layers):
@@ -345,11 +345,22 @@ class FFNN:
             if idx == 0:
                 continue
 
-            gradients = np.array([grad for grad in self.layers[idx].get_grads()]).flatten()
+            gradients =self.layers[idx].grad_W.flatten()
             sns.kdeplot(gradients, label=f'Layer {idx+1}', fill=True, alpha=0.4, bw_adjust=0.5)
 
         plt.xlabel('Gradient Value')
         plt.ylabel('Density')
         plt.title('Gradient Distribution per Layer')
         plt.legend()
+        plt.show()
+
+    def plot_loss_history(self,history):
+        plt.figure(figsize=(4, 3))
+        plt.plot(history["train_loss"], label="Training Loss", marker='o')
+        plt.plot(history["val_loss"], label="Validation Loss", marker='s')
+        plt.xlabel("Epochs")
+        plt.ylabel("Loss")
+        plt.title("Training & Validation Loss Over Epochs")
+        plt.legend()
+        plt.grid(True)
         plt.show()

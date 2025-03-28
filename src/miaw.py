@@ -292,13 +292,19 @@ class FFNN:
 
         config = data["training_config"]
         model_info = config["model"]
+        learning_parameters = config["learning_parameters"]
+        loss_function = learning_parameters["loss_function"]
+        weight_init = learning_parameters["weight_init"]
+        use_rmsnorm = learning_parameters["use_rmsnorm"]
+        reg_type = learning_parameters.get("reg_type", None)
         layers = model_info["layers"]
 
         layer_sizes = [model_info["input_size"]] + [l["number_of_neurons"] for l in layers]
         activations = [l["activation_function"] for l in layers]
         use_rmsnorm = layers[0].get("use_rmsnorm", False)
 
-        model = FFNN(layer_sizes, activations, use_rmsnorm=use_rmsnorm)
+        model = FFNN(layer_sizes, activations, use_rmsnorm=use_rmsnorm, 
+                     loss_function=loss_function, weight_init=weight_init, reg_type=reg_type)
 
         final_weights = data.get("results", {}).get("final_weights", [])
         if final_weights:
@@ -321,8 +327,8 @@ class FFNN:
                 print(f"Layer {idx} dont exists.")
                 continue
 
-            if idx == 0:
-                continue
+            # if idx == 0:
+            #     continue
 
             weights = self.layers[idx].W.flatten()
             # plt.hist(weights, bins=20, alpha=0.6, label=f'Layer {idx+1}')

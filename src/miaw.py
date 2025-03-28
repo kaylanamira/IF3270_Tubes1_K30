@@ -35,13 +35,30 @@ def softmax(x):
 def d_softmax_crossentropy(y_pred, y_true):
     return (y_pred - y_true) / y_true.shape[0]
 
+def leaky_relu(x):
+    return np.where(x > 0, x, 0.01 * x)
+
+def d_leaky_relu(x):
+    return np.where(x > 0, 1, 0.01)
+
+def swish(x):
+    s = sigmoid(x)
+    sw = s * x
+    return sw
+
+def d_swish(x):
+    s = sigmoid(x)
+    return s * (1 + x * (1 - s))
+
 def get_activation(name):
     return {
         'relu': (relu, d_relu),
         'sigmoid': (sigmoid, d_sigmoid),
         'tanh': (tanh, d_tanh),
         'linear': (linear, d_linear),
-        'softmax': (softmax, None)
+        'softmax': (softmax, None),
+        'leaky_relu': (leaky_relu, d_leaky_relu),
+        'swish': (swish, d_swish),
     }[name]
 
 # Loss functions

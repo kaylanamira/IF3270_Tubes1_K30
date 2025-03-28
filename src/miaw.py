@@ -3,7 +3,6 @@ import numpy as np
 import json
 from tqdm import tqdm
 
-# Activation functions and derivatives
 def relu(x):
     return np.maximum(0, x)
 
@@ -117,6 +116,10 @@ class Layer:
         dW = dz.T @ x / x.shape[0]
         db = np.mean(dz, axis=0)
         dx = dz @ self.W
+
+        self.grad_W = dW
+        self.grad_b = db
+
         return dx, dW, db
 
 class FFNN:

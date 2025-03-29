@@ -12,7 +12,8 @@ def d_relu(x):
     return (x > 0).astype(float)
 
 def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
+    x_clipped = np.clip(x, -500, 500)
+    return 1 / (1 + np.exp(-x_clipped))
 
 def d_sigmoid(x):
     s = sigmoid(x)
@@ -207,6 +208,7 @@ class FFNN:
 
             for i in range(0, x.shape[0], batch_size):
                 xb = x[i:i+batch_size]
+               
                 yb = y[i:i+batch_size]
 
                 y_pred = self.forward(xb)
@@ -218,6 +220,9 @@ class FFNN:
                     loss += lambda_reg * sum(np.sum(np.abs(layer.W)) for layer in self.layers)
 
                 grads = self.backward(y_pred, yb)
+                if epoch == epochs - 1:
+                    for i, layer in enumerate(self.layers):
+                        layer.grad = grads[i]
                 self.update_weights(grads, lr, reg_type, lambda_reg)
 
                 batch_losses.append(loss)
@@ -348,17 +353,16 @@ class FFNN:
                 print(f"Layer {idx} dont exists.")
                 continue
 
-            if idx == 0:
-                continue
-
-            gradients =self.layers[idx].grad_W.flatten()
+            gradients = np.concatenate([g.flatten() for g in self.layers[idx].grad])
             sns.kdeplot(gradients, label=f'Layer {idx+1}', fill=True, alpha=0.4, bw_adjust=0.5)
 
-        plt.xlabel('Gradient Value')
-        plt.ylabel('Density')
-        plt.title('Gradient Distribution per Layer')
-        plt.legend()
-        plt.show()
+            plt.xlabel('Gradient Value')
+            plt.ylabel('Density')
+            plt.title('Gradient Distribution per Layer')
+            plt.legend()
+            plt.show()
+
+            return gradients
 
     def plot_loss_history(self,history):
         plt.figure(figsize=(4, 3))

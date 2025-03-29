@@ -107,6 +107,7 @@ class Layer:
             raise ValueError(f"Unknown weight_init: {weight_init}")
 
         self.b = np.zeros((n_out,))
+        self.G = np.zeros_like(self.W) 
         self.cache = {}
 
     def rmsnorm(self, x, epsilon=1e-5):
@@ -132,9 +133,12 @@ class Layer:
         else:
             dz = grad_output * self.d_act_fn(z)
 
+
         dW = dz.T @ x / x.shape[0]
         db = np.mean(dz, axis=0)
         dx = dz @ self.W
+        self.G = dW
+
         return dx, dW, db
 
 class FFNN:
@@ -309,7 +313,6 @@ class FFNN:
                 weights.append((np.array(W), np.array(B).flatten())) 
             model.set_weights(weights)
 
-
         return model
     
     def plot_weight_distribution(self, layer_indices):
@@ -345,12 +348,38 @@ class FFNN:
             if idx == 0:
                 continue
 
-            gradients =self.layers[idx].grad_W.flatten()
+            gradients =self.layers[idx].G.flatten()
             sns.kdeplot(gradients, label=f'Layer {idx+1}', fill=True, alpha=0.4, bw_adjust=0.5)
 
         plt.xlabel('Gradient Value')
         plt.ylabel('Density')
         plt.title('Gradient Distribution per Layer')
+        plt.legend()
+        plt.show()
+
+    def plot_distribution(self, layer_indices, plot_type="weight"):
+        """Plots the distribution of weights or gradients for specified layers."""
+        plt.figure(figsize=(5, 3))
+        sns.set_style("whitegrid")
+
+        valid_indices = [idx for idx in layer_indices if 0 < idx < len(self.layers)]
+        
+        if not valid_indices:
+            print("No valid layers selected for plotting.")
+            return
+
+        for idx in valid_indices:
+            data = getattr(self.layers[idx], "W" if plot_type == "weight" else "G", None)
+            
+            if data is None:
+                print(f"Layer {idx+1} has no {'weights' if plot_type == 'weight' else 'gradient'}.")
+                continue
+            
+            sns.kdeplot(data.ravel(), label=f'Layer {idx+1}', fill=True, alpha=0.4, bw_adjust=0.5)
+
+        plt.xlabel(f'{plot_type.capitalize()} Value')
+        plt.ylabel('Density')
+        plt.title(f'{plot_type.capitalize()} Distribution per Layer')
         plt.legend()
         plt.show()
 

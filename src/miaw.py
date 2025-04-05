@@ -350,30 +350,31 @@ class FFNN:
 
     def plot_gradient_distribution(self, layer_indices):
         plt.figure(figsize=(5, 3))
+        sns.set_style("whitegrid")
 
         for idx in layer_indices:
             if idx >= len(self.layers):
                 print(f"Layer {idx} dont exists.")
                 continue
 
-            if idx == 0:
-                continue
+            # if idx == 0:
+            #     continue
 
             gradients =self.layers[idx].G.flatten()
             sns.kdeplot(gradients, label=f'Layer {idx+1}', fill=True, alpha=0.4, bw_adjust=0.5)
 
-            plt.xlabel('Gradient Value')
-            plt.ylabel('Density')
-            plt.title('Gradient Distribution per Layer')
-            plt.legend()
-            plt.show()
+        plt.xlabel('Gradient Value')
+        plt.ylabel('Density')
+        plt.title('Gradient Distribution per Layer')
+        plt.legend()
+        plt.show()
 
     def plot_distribution(self, layer_indices, plot_type="weight"):
         """Plots the distribution of weights or gradients for specified layers."""
         plt.figure(figsize=(5, 3))
         sns.set_style("whitegrid")
 
-        valid_indices = [idx for idx in layer_indices if 0 < idx < len(self.layers)]
+        valid_indices = [idx for idx in layer_indices if 0 <= idx < len(self.layers)]
         
         if not valid_indices:
             print("No valid layers selected for plotting.")

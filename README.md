@@ -100,8 +100,7 @@ Jika semua berjalan dengan benar, seharusnya akan dihasilkan output seperti:
 ## Pembagian Tugas
 
 ### Muhammad Neo Cicero Koda (13522108)
-- Forward propagation (autograd)
-- Backward propagation (autograd)
+- FFNN Model (autograd)
 - Activation functions
 - Weight initialization
 - Laporan dan testing

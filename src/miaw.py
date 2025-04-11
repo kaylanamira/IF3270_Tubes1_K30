@@ -263,7 +263,7 @@ class FFNN:
     def set_weights(self, weights):
         for layer, (W, b) in zip(self.layers, weights):
             layer.W = np.array(W)
-            layer.b = np.array(b).flatten()  # Ensure bias is 1D
+            layer.b = np.array(b).flatten() 
 
 
     def to_json(self):
@@ -334,9 +334,6 @@ class FFNN:
             if idx >= len(self.layers):
                 print(f"Layer {idx} dont exists.")
                 continue
-
-            # if idx == 0:
-            #     continue
 
             weights = self.layers[idx].W.flatten()
             # plt.hist(weights, bins=20, alpha=0.6, label=f'Layer {idx+1}')

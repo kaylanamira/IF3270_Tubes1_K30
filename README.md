@@ -105,3 +105,15 @@ Jika semua berjalan dengan benar, seharusnya akan dihasilkan output seperti:
 - Activation functions
 - Weight initialization
 - Laporan dan testing
+
+### Angelica Kierra Ninta Gurning (13522048)
+- FFNN Model (non-autograd)
+- Regularization
+- Normalizaton
+- Laporan
+
+### Kayla Namira Mariadi
+- FFNN Model Visualization
+- FFNN Model (non-autograd)
+- Laporan
+- Testing
